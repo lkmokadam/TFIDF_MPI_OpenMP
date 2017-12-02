@@ -40,7 +40,6 @@ int main(int argc, char *argv[]) {
   char filename[MAX_FILEPATH_LENGTH], word[MAX_WORD_LENGTH],
       document[MAX_DOCUMENT_NAME_LENGTH];
 
-  printf("%d\n", __LINE__);
 
   // Will hold all TFIDF objects for all documents
   obj TFIDF[MAX_WORDS_IN_CORPUS];
@@ -68,7 +67,6 @@ int main(int argc, char *argv[]) {
     numDocs++;
   }
 
-  printf("Line no : %d \n", __LINE__);
   MPI_Init(&argc, &argv);
   int rank, no_of_processes;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -79,7 +77,6 @@ int main(int argc, char *argv[]) {
 
   int distribution = numDocs / no_of_workers;
 
-  printf("numDocs -> %d\n", numDocs);
 
   int *dist_arr = (int *)malloc(sizeof(int) * no_of_processes);
 
@@ -93,15 +90,12 @@ int main(int argc, char *argv[]) {
   int remaining_files = numDocs % no_of_workers;
   i = 0;
   while (remaining_files) {
-
-    printf("%d\n", remaining_files);
     if (i == 0)
       dist_arr[i] = 0;
     else {
       dist_arr[i]++;
       remaining_files--;
     }
-    printf("%d --> %d\n", dist_arr[i], i);
     i++;
   }
 
@@ -110,7 +104,7 @@ int main(int argc, char *argv[]) {
   }
 
   // print the dist arr
-  printf("rank : %d dist_arr :", rank);
+  printf("rank : %d --> dist_arr :", rank);
   for (i = 0; i < no_of_processes; i++) {
     printf("%d ", dist_arr[i]);
   }
@@ -123,7 +117,6 @@ int main(int argc, char *argv[]) {
       break;
     if (!(i > dist_arr[rank - 1] && i <= dist_arr[rank]))
       continue;
-    printf("Rank : %d ---->  File : %d \n", rank, i);
 
     sprintf(document, "doc%d", i);
     sprintf(filename, "input/%s", document);
@@ -190,28 +183,33 @@ int main(int argc, char *argv[]) {
 
     fclose(fp);
   }
-
+ 
+  
   MPI_Reduce(&TF_idx, &global_TF_idx, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(&uw_idx, &global_uw_idx, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-  printf("global_TF_idx : %d   global_uw_index : %d \n", global_TF_idx, global_uw_idx);
+  
 
   MPI_Request request1, request2;
   if (rank != ROOT) {
+    printf("%d -- tfidx %d \n",rank,TF_idx);
     for (int i = 0; i < TF_idx; i++) {
-      printf("Sending %d %d ", rank, i);
-      MPI_Send(&TFIDF[i], sizeof(obj), MPI_BYTE, 0, 11, MPI_COMM_WORLD);
+      printf("messege being sent by %d\n",rank);
+      MPI_Isend(&TFIDF[i], sizeof(obj), MPI_BYTE, 0, 11, MPI_COMM_WORLD,&request1);
     }
   }
-
-  for (int i = 0; i < uw_idx; i++) {
-    MPI_Send(&unique_words[i], sizeof(u_w), MPI_BYTE, 0, 22, MPI_COMM_WORLD);
+  if (rank != ROOT) {
+    for (int i = 0; i < uw_idx; i++) {
+      printf("%d -- uw %d \n",rank,uw_idx);
+      MPI_Isend(&unique_words[i], sizeof(u_w), MPI_BYTE, 0, 22, MPI_COMM_WORLD,&request1);
+    } 
   }
-
+  printf("--------------------------------------------------------------------------------------");
+  printf(" rank = %d -- global_TF_idx -> %d global_uw_idx -> %d \n",rank, global_TF_idx, global_uw_idx );
   if (rank == ROOT) {
-
+    printf(" global_TF_idx -> %d global_uw_idx -> %d \n",global_TF_idx, global_uw_idx );
     int k = 0;
     for (int i = 0; i < global_TF_idx; i++) {
-        printf("Receiving from %d obj %d \n", i, k);
+         printf("messege received : %d\n",i);
         MPI_Recv(&TFIDF[k++], sizeof(obj), MPI_BYTE, MPI_ANY_SOURCE, 11, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
     }
@@ -219,7 +217,7 @@ int main(int argc, char *argv[]) {
     int cur_uw_idx = 0;
     for (int i = 0; i < global_uw_idx; i++) {
         contains = 0;
-        printf("Receiving from: %d   u_w: %d \n", i, cur_uw_idx);
+        
         u_w temp;
         MPI_Recv(&temp, sizeof(obj), MPI_BYTE, MPI_ANY_SOURCE, 22, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
@@ -238,7 +236,7 @@ int main(int argc, char *argv[]) {
         // If unique_words array does not contain it, make a new one with
         // numDocsWithWord=1
         if (!contains) {
-          printf("%s  %d %d \n", temp.word, temp.numDocsWithWord,temp.currDoc);
+          
           strcpy(unique_words[cur_uw_idx].word, temp.word);
           unique_words[cur_uw_idx].numDocsWithWord = temp.numDocsWithWord;
           unique_words[cur_uw_idx].currDoc = temp.currDoc;
@@ -259,7 +257,6 @@ int main(int argc, char *argv[]) {
     // Use unique_words array to populate TFIDF objects with: numDocsWithWord
     for (i = 0; i < global_TF_idx; i++) {
       for (j = 0; j < global_uw_idx; j++) {
-        printf("%d ",j);
         if (!strcmp(TFIDF[i].word, unique_words[j].word)) {
           TFIDF[i].numDocsWithWord = unique_words[j].numDocsWithWord;
           break;
