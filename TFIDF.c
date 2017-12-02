@@ -67,26 +67,28 @@ int main(int argc, char *argv[]) {
     numDocs++;
   }
 
+  // initializes the MPI global vafriables
   MPI_Init(&argc, &argv);
   int rank, no_of_processes;
+  // gets the rank of the process
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  //gets the totla number of processes
   MPI_Comm_size(MPI_COMM_WORLD, &no_of_processes);
 
+  // initializes the total number of TF entries and uw entries
   int global_TF_idx = 0, global_uw_idx = 0;
   int no_of_workers = no_of_processes - 1;
 
+  //distribute the files among the processes 
   int distribution = numDocs / no_of_workers;
-
-
   int *dist_arr = (int *)malloc(sizeof(int) * no_of_processes);
-
   for (i = 0; i < no_of_processes; i++) {
     if (i == 0)
       dist_arr[i] = 0;
     else
       dist_arr[i] = distribution;
   }
-
   int remaining_files = numDocs % no_of_workers;
   i = 0;
   while (remaining_files) {
@@ -99,6 +101,8 @@ int main(int argc, char *argv[]) {
     i++;
   }
 
+
+  // create the file assignment array of the processes
   for (int i = 1; i < no_of_processes; i++) {
     dist_arr[i] = dist_arr[i] + dist_arr[i - 1];
   }
@@ -184,44 +188,45 @@ int main(int argc, char *argv[]) {
     fclose(fp);
   }
  
-  
+  // reduces the TF_idx values to the global_TF_idx . same with the uw_idx
   MPI_Reduce(&TF_idx, &global_TF_idx, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(&uw_idx, &global_uw_idx, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
   
-
   MPI_Request request1, request2;
   if (rank != ROOT) {
-    printf("%d -- tfidx %d \n",rank,TF_idx);
+    //sending all the values to calculate TFIDF to the root
     for (int i = 0; i < TF_idx; i++) {
-      printf("messege being sent by %d\n",rank);
       MPI_Isend(&TFIDF[i], sizeof(obj), MPI_BYTE, 0, 11, MPI_COMM_WORLD,&request1);
     }
   }
   if (rank != ROOT) {
     for (int i = 0; i < uw_idx; i++) {
-      printf("%d -- uw %d \n",rank,uw_idx);
+      // sending all the unique words to the root
       MPI_Isend(&unique_words[i], sizeof(u_w), MPI_BYTE, 0, 22, MPI_COMM_WORLD,&request1);
     } 
   }
-  printf("--------------------------------------------------------------------------------------");
-  printf(" rank = %d -- global_TF_idx -> %d global_uw_idx -> %d \n",rank, global_TF_idx, global_uw_idx );
   if (rank == ROOT) {
-    printf(" global_TF_idx -> %d global_uw_idx -> %d \n",global_TF_idx, global_uw_idx );
     int k = 0;
+    // root receives all the obj objects from worker to calculate TFIDF. 
     for (int i = 0; i < global_TF_idx; i++) {
          printf("messege received : %d\n",i);
         MPI_Recv(&TFIDF[k++], sizeof(obj), MPI_BYTE, MPI_ANY_SOURCE, 11, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
     }
 
+
     int cur_uw_idx = 0;
     for (int i = 0; i < global_uw_idx; i++) {
         contains = 0;
         
         u_w temp;
+        // root receives all the u_w objects from worker to calculate TFIDF. 
         MPI_Recv(&temp, sizeof(obj), MPI_BYTE, MPI_ANY_SOURCE, 22, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
 
+        // update the numDocsWithWord of the respective word as 
+        // different documents were assigned to different processes.
+        // Thus this is very essential step.
         for (j = 0; j < cur_uw_idx; j++) {
           if (!strcmp(unique_words[j].word, temp.word)) {
             contains = 1;
