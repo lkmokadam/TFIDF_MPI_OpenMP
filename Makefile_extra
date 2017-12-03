@@ -1,0 +1,5 @@
+all:
+	mpicc -g -o TFIDF_extra TFIDF_extra.c -lm -O3 -fopenmp
+
+clean:
+	rm -f TFIDF_extra

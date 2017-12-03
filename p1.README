@@ -1,0 +1,16 @@
+// lmokada - Laxmikant Kishor Mokadam
+
+
+Q: Describe your implementation step-by-step. This should include descriptions of what MPI messages get sent/received by which rank, and in what order.
+
+A:
+1) Here in the implemenattion, I have tries to implement the system with one root and many workers. 
+2) A system can be a node or a worker but not both at the same time. 
+3) At first we craete the distribute the work and create the assignment array. 
+4) Assignment array is like this [0 ,3,6]. This means worker 1 will work on file doc0,doc1, doc2 , worker 2 will work on the doc3, doc4 doc5, worker 3 will work on doc6 and doc7. 
+5) The respective worker reads the allocatted file and fills the obj and u_w objects and send to the root node. 
+6) Here, all workers send the data with non blocking MPI_Isend. this allows them to work on the data more rather than waiting for the communications. 
+7) In parallel, on the root side, root receives the obj and u_w objects. Root uses blocking receive call to make sure it gets all data before proceeding further in calculation of TFIDF values. 
+8) We can know the number of receive request fo both u_w and obj by adding all TF_idx and uw_idx valyes of all processors. This can be achived from the reduce operations on these variables. 
+9) Now root only access the obj and u_w objects and create calculate TFIDF values. It is not wise to send the data to workers to calculate thses values as calculation of TFIDF is very less expensive task than ommunication. This is because, for calculation of TFIDF, we have to read the data only once or in other words, the operation to calculate TFIDF is equal to the read operation to read and write the data. Thus, it will be better to claculate the TFIDF values on root. 
+

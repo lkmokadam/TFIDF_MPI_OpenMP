@@ -1,3 +1,5 @@
+// lmokada - Laxmikant Kishor Mokadam
+
 #include <dirent.h>
 #include <math.h>
 #include <mpi.h>
