@@ -1,16 +1,38 @@
 // lmokada - Laxmikant Kishor Mokadam
 
 
-Q: Describe your implementation step-by-step. This should include descriptions of what MPI messages get sent/received by which rank, and in what order.
+Q: 
+Describe your implementation step-by-step. This should include descriptions of what MPI messages get sent/received by which rank, and in what order.
 
 A:
-1) Here in the implemenattion, I have tries to implement the system with one root and many workers. 
+1) Here in the implementation, I have tried to implement the system with one root and many workers. 
 2) A system can be a node or a worker but not both at the same time. 
-3) At first we craete the distribute the work and create the assignment array. 
-4) Assignment array is like this [0 ,3,6]. This means worker 1 will work on file doc0,doc1, doc2 , worker 2 will work on the doc3, doc4 doc5, worker 3 will work on doc6 and doc7. 
-5) The respective worker reads the allocatted file and fills the obj and u_w objects and send to the root node. 
-6) Here, all workers send the data with non blocking MPI_Isend. this allows them to work on the data more rather than waiting for the communications. 
+3) At first, we create the distribute the work and create the assignment array. 
+4) Assignment array is like this [0,3,6]. This means worker 1 will work on file doc0,doc1, doc2, worker 2 will work on the doc3, doc4 doc5, worker 3 will work on doc6 and doc7. 
+5) The respective worker reads the allocated file and fills the obj and u_w objects and send to the root node. 
+6) Here, all workers send the data to nonblocking MPI_Isend. this allows them to work on the data more rather than waiting for the communications. 
 7) In parallel, on the root side, root receives the obj and u_w objects. Root uses blocking receive call to make sure it gets all data before proceeding further in calculation of TFIDF values. 
-8) We can know the number of receive request fo both u_w and obj by adding all TF_idx and uw_idx valyes of all processors. This can be achived from the reduce operations on these variables. 
-9) Now root only access the obj and u_w objects and create calculate TFIDF values. It is not wise to send the data to workers to calculate thses values as calculation of TFIDF is very less expensive task than ommunication. This is because, for calculation of TFIDF, we have to read the data only once or in other words, the operation to calculate TFIDF is equal to the read operation to read and write the data. Thus, it will be better to claculate the TFIDF values on root. 
+8) We can know the number of receive request for both u_w by adding all uw_idx values of all processors. This can be achieved from the reduce operations on these variables. 
+9) Now on the root side, we will gather all the u_w object using Gather operation. Then we calculate all the numDocswithWord of the respective word, and then update u_w objects and broadcast the data to the nodes using broadcast operation. This will give nodes all required data to calculate TFIDF.
+10) Now, each node will calculate the TFIDF values of the respective word and send them back to the root.
+11) Now on the root, we ill just open a file and store all the TFIDF value into the file.
 
+
+Q: Describe how you could add more parallelism to your code so that all of the processors on each MPI node are used instead of only one processor per MPI node.
+A: 
+At first, each node will read the individual file. This was a tough decision and took most of the time in the assignment. I have tried all three type of file sharing and this one is giving me the best results. This is because, generally the documents such as news articles, messages, tweets are of very small size in words may be 100s. If we divide a file among the processors, each process will get very less work and overhead causing due to message passing(especially latency) is very large.  (Thus consideration depends on the application area. I have considered the application area with less than 1000 words of text like social networking, news articles etc.)
+If we give each thread a file, it will have enough work to do to hide the overhead of directory contention. We can also reduce the directory contention by using replicas of the files. Thus, in an extra credit program I have used OpenMP threads to parallelize the work on the node, and MPI to parallelize the work over different nodes.
+Then in second part of the program, we calculate the TFIDF values of the word, here we can simple use the OpenMP to parallelize the code using parallelized for loop.
+
+Q: Implement the additional parallelism you just described. Submit this as TFIDF_extra.c (Submitted) . Compare this implementation to your MPI implementation. 
+A: 
+This extra credit implementation has the ability to use multiple cores available on the node to parallelize the code more. As we have Opteron processor and have 16 logical threads, I have increased the MAX_WORDS_IN_CORPUS by multiple of 16 as there can be a case when the same word can be duplicated due to multiple threads. The deduplication has been handled when we aggregate the results at the root. Also, to make sure the program works correctly few variables are made shared/private. shared(TFIDF) shared(TF_idx) shared(uw_idx) as theses are the data collector of the worker program. Also int contains,docSize has made private by declaring them inside the camp threads code. Additionally, as described above, each thread is opening the file to read the data. The reason is also explained above.
+
+
+Q: Compare your MPI implementation to the previous MapReduce and Spark implementations of TFIDF. 
+A: 
+Here in the implementation we have implemented the code especially for TFIDF. There is no API development or the portability considered. But in the case of the MapReduce/Spark, they want to provide the API for different application areas. 
+This increases the abstraction layer, increasing the execution time.
+Here implementation can be observed as the MapReduce operation as we are reading and creating the u_w and obj objects on each node using map like implementation. Then we implemented the reduce like operation on u_w. Root collects all the u_w objects and fills them with the correct numOfDocwithWord. Now again we have implemented the Map like operation to calculate the TFIDF values and the Reduce like operation to gather the data on root and save to the file. As all the operations are being performed on the memory only, this is like memory map-reduce operations. Comparing this to spark which uses memory operation, this is very fast. this is because we cannot implement such algo there due to the limitation of its API/mechanism which restricts our ability. 
+As compared to the MapReduce/Hadoop implementation, this will surely give high performance as it has no disk I/O operations. each disk I/O operation comes with a lot of overhead increasing the execution time. But as our code running using only the memory, not disk, provides significant advantage for performance. 
+But, our code does not have any resilience capability which comes in hereditary if we use the Hadoop MapReduce or The Apache Spark. So for that if we add use some kind of resilence technique, it will slow down our code. But do we really need this? Yes, if we want to work on the very large data, like in tweets of all twitter users in a day. So at that time we will need to find the compromise between performance and reliability of the system  
