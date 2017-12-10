@@ -225,12 +225,6 @@ int main(int argc, char *argv[])
   MPI_Reduce(&uw_idx, &global_uw_idx, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
   MPI_Request request1, request2;
-  /*if (rank != ROOT) {
-    //sending all the values to calculate TFIDF to the root
-    for (int i = 0; i < TF_idx; i++) {
-      MPI_Isend(&TFIDF[i], sizeof(obj), MPI_BYTE, 0, 11, MPI_COMM_WORLD,&request1);
-    }
-  }*/
   if (rank != ROOT)
   {
     for (int i = 0; i < uw_idx; i++)
@@ -242,12 +236,6 @@ int main(int argc, char *argv[])
   if (rank == ROOT)
   {
     int k = 0;
-    // root receives all the obj objects from worker to calculate TFIDF.
-    /*for (int i = 0; i < global_TF_idx; i++) {
-         printf("messege received : %d\n",i);
-        MPI_Recv(&TFIDF[k++], sizeof(obj), MPI_BYTE, MPI_ANY_SOURCE, 11, MPI_COMM_WORLD,
-                 MPI_STATUS_IGNORE);
-    }*/
 
     int cur_uw_idx = 0;
     for (int i = 0; i < global_uw_idx; i++)
