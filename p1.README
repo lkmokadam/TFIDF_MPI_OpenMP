@@ -20,7 +20,7 @@ A:
 Direction to make and run extra credit program
 
 Make:  make -f Makefile_extra
-RUN:   mpirun -np 4 ./TFIDF
+RUN:   mpirun -np 4 ./TFIDF_extra
 Note: this gives output in output_extra.txt
 
 
