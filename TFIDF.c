@@ -128,13 +128,6 @@ int main(int argc, char *argv[])
     dist_arr[i] = dist_arr[i] + dist_arr[i - 1];
   }
 
-  // print the dist arr
-  printf("rank : %d --> dist_arr :", rank);
-  for (i = 0; i < no_of_processes; i++)
-  {
-    printf("%d ", dist_arr[i]);
-  }
-  printf("\n");
 
   // Loop through each document and gather TFIDF variables for each word
   for (i = 1; i <= numDocs; i++)
@@ -324,7 +317,6 @@ int main(int argc, char *argv[])
                cursor++;
       }
     }
-    printf("%d\n", __LINE__);
     // Sort strings and print to file
     qsort(strings, TF_idx, sizeof(char) * MAX_STRING_LENGTH, myCompare);
     FILE *fp = fopen("output.txt", "w");
@@ -333,7 +325,6 @@ int main(int argc, char *argv[])
       printf("Error Opening File: output.txt\n");
       exit(0);
     }
-    printf("%d %d \n", rank, __LINE__);
     for (i = 0; i < TF_idx; i++)
       fprintf(fp, "%s\n", strings[i]);
     fclose(fp);
