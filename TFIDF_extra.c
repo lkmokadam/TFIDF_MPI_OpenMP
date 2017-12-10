@@ -117,12 +117,7 @@ int main(int argc, char *argv[]) {
     dist_arr[i] = dist_arr[i] + dist_arr[i - 1];
   }
 
-  // print the dist arr
-  printf("rank : %d --> dist_arr :", rank);
-  for (i = 0; i < no_of_processes; i++) {
-    printf("%d ", dist_arr[i]);
-  }
-  printf("\n");
+
 
   // Loop through each document and gather TFIDF variables for each word
   // if rank is not zero, work will be done i.e. on threads
@@ -141,7 +136,7 @@ int main(int argc, char *argv[]) {
       continue;
     }
     int tid = omp_get_thread_num();
-    printf("%d %d %s \n", rank, tid, document );
+
 
     // Get the document size
     while ((fscanf(fp, "%s", word)) != EOF)
@@ -290,7 +285,7 @@ int main(int argc, char *argv[]) {
     TF_idx = global_TF_idx;
     uw_idx = global_uw_idx;
 
-    printf("%d %d\n", __LINE__, TF_idx);
+
     int cursor = 0;
 
     for (j = 0; j < MAX_WORDS_IN_CORPUS * no_of_processes; j++)
@@ -302,7 +297,7 @@ int main(int argc, char *argv[]) {
                cursor++;
       }
     }
-    printf("%d\n", __LINE__);
+
     // Sort strings and print to file
     qsort(strings, TF_idx, sizeof(char) * MAX_STRING_LENGTH, myCompare);
     FILE *fp = fopen("output_extra.txt", "w");
