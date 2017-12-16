@@ -6,8 +6,8 @@ Describe your implementation step-by-step. This should include descriptions of w
 
 A:
 1) Here in the implementation, I have tried to implement the system with one root and many workers. 
-2) A system can be a node or a worker but not both at the same time. 
-3) At first, we create the distribute the work and create the assignment array. 
+2) A system can be a root or a worker but not both at the same time. 
+3) At first, we distribute the work and create the assignment array. 
 4) Assignment array is like this [0,3,6]. This means worker 1 will work on file doc0,doc1, doc2, worker 2 will work on the doc3, doc4 doc5, worker 3 will work on doc6 and doc7. 
 5) The respective worker reads the allocated file and fills the obj and u_w objects and send to the root node. 
 6) Here, all workers send the data to nonblocking MPI_Isend. this allows them to work on the data more rather than waiting for the communications. 
